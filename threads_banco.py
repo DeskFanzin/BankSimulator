@@ -4,24 +4,39 @@ import logging
 import random
 import Banco
 
-def cria_contas(num_contas):
-    for i in range(num_contas):
-        banco.contas.append(Banco.Conta(random.randint(1, num_contas), random.randrange(0, 500)))
+lock = threading.Lock()
+semaphore = threading.Semaphore(5)
+banco = Banco.Banco()
+
+banco.cria_conta(6)
+print(banco)
 
 def operacao_thread(id):
-    operacao_escolhida = random.choice(Banco.Banco.depositar(), Banco.Banco.sacar(), Banco.Banco.consultar_saldo())
-    
     while True:
-        semaphore.acquire()
-        lock.acquire()
-        logging.info("Thread %s pegou o lock e o semáforo", id)
-        banco.depositar(Banco.contas[id], random.randrange(0, 100))
-        logging.info("Thread %s depositou", id)
-        lock.release()
-        logging.info("Thread %s liberou o lock", id)
-        semaphore.release()
-        logging.info("Thread %s liberou o semáforo", id)
-        time.sleep(1)
+        operacao_escolhida = random.choice(['depositar', 'sacar', 'consultar'])
+        conta_aleatoria = random.choice(banco.chaves)
+        match (operacao_escolhida):
+            case 'depositar':
+                lock.acquire()
+                logging.info("Thread %d: depositando", id)
+                banco.depositar(conta_aleatoria, random.randint(1, 100))
+                logging.info("Thread %d: depositou", id)
+                lock.release()
+                time.sleep(1)
+            case 'sacar':
+                lock.acquire()
+                logging.info("Thread %d: sacando", id)
+                banco.sacar(conta_aleatoria, random.randint(1, 100))
+                logging.info("Thread %d: sacou", id)
+                lock.release()
+                time.sleep(1)
+            case 'consultar':
+                semaphore.acquire()
+                logging.info("Thread %d: consultando", id)
+                print("Thread %d: saldo: %d" % (id, banco.consultar_saldo(conta_aleatoria)))
+                semaphore.release()
+                logging.info("Thread %d: consultou", id)
+                time.sleep(1)
 
 if __name__ == "__main__":
     threads = []
@@ -35,7 +50,4 @@ if __name__ == "__main__":
         threads.append(t)
     for t in threads:
         t.join()
-
-lock = threading.Lock()
-semaphore = threading.Semaphore(5)
-banco = Banco.Banco()
+    
