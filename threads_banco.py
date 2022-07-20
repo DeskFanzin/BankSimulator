@@ -9,7 +9,6 @@ semaphore = threading.Semaphore(5)
 banco = Banco.Banco()
 
 banco.cria_conta(6)
-print(banco)
 
 def operacao_thread(id):
     while True:
